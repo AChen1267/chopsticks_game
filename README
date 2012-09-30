@@ -1,0 +1,21 @@
+Chopsticks game:
+
+Objective: Make your opponent lose all their fingers (points).
+
+How to play:
+The game will prompt you for 3 options: OVERFLOW, SPLIT, and FRIENDLY FIRE. These will be explained throughout the README.
+It is recommended that SPLIT is on.
+Each player starts out with 1 finger on each hand.
+In each turn (turns alternate), the player can ATTACK or SPLIT (if SPLIT is on).
+
+ATTACK: Choose one of your hands and one of your opponent's hands.
+The number of fingers on your hand will be added to that of the opponent's chosen hand.
+If OVERFLOW is on, the opponent's hand will die (no fingers on the hand) only if the number of fingers of your hand and your opponent's hand add up to 5.
+If OVERFLOW is off, the opponent's hand will die if the total is 5 or greater.
+If FRIENDLY FIRE is on, then the opponent's hand you choose can be your own hand and the same rules as above apply.
+
+SPLIT: Take the total number of fingers on both your hands and divide them between your hands such that
+you end up with a different number of fingers on each hand from the original as well as the original's symmetric position.
+For example, if you have 2 fingers in your left hand and 1 finger in your right, you cannot split to have
+your left hand have 1 finger and right hand have 2 because that is the symmetric position as the original.
+Another rule of splitting is that you cannot split such that one hand loses all fingers.
