@@ -1,10 +1,11 @@
 #include "GameWorld.h"
+#include "Game.h"
 #include "Hand.h"
 #include "extras.h"
 #include <cstdlib>
 using namespace std;
 
-GameWorld::GameWorld(bool friendlyFire, bool overflow, bool allowSplit)
+GameWorld::GameWorld(Game* game, bool friendlyFire, bool overflow, bool allowSplit)
 {	
 	topsLeft = new Hand(this,TOP);
 	topsRight = new Hand(this,TOP);
@@ -14,6 +15,7 @@ GameWorld::GameWorld(bool friendlyFire, bool overflow, bool allowSplit)
 	friendlyFireEnabled = friendlyFire;
 	overflowEnabled = overflow;
 	allowPointSplits = allowSplit;
+	m_game = game;
 }
 Hand* GameWorld::tLeft() const { return topsLeft; }
 Hand* GameWorld::tRight() const { return topsRight; }
@@ -34,9 +36,37 @@ void GameWorld::attack(Hand* from, Hand* to)
 		to->setDead(true);
 	return;
 }
-void GameWorld::split(int leftNum)
+bool GameWorld::split(int amtL2R)
 {
-	return;
+	if (m_game->isTopsTurn())
+	{
+		int right = topsRight->numDigits();
+		int newLeft = topsLeft->numDigits() - amtL2R;
+		int newRight = right + amtL2R;
+
+		if (newLeft < 1 || newLeft > 4 || newLeft == right || amtL2R == 0 || newRight < 1 || newRight > 4)
+			return false;
+		else
+		{
+			topsLeft->addDigits(-amtL2R);
+			topsRight->addDigits(amtL2R);
+		}
+	}
+	else
+	{
+		int right = bottomsRight->numDigits();
+		int newLeft = bottomsLeft->numDigits() - amtL2R;
+		int newRight = right + amtL2R;
+
+		if (newLeft < 1 || newLeft > 4 || newLeft == right || amtL2R == 0 || newRight < 1 || newRight > 4)
+			return false;
+		else
+		{
+			bottomsLeft->addDigits(-amtL2R);
+			bottomsRight->addDigits(amtL2R);
+		}
+	}
+	return true;
 }
 GameWorld::~GameWorld()
 {

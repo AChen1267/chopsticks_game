@@ -18,7 +18,7 @@ int main()
 	getline(cin,options[2]);
 	bool params[3];
 	for(int i=0; i<3; i++)
-		if (options[i][0] = 'Y')
+		if (!options[i].compare("Y"))
 			params[i] = true;
 		else
 			params[i] = false;

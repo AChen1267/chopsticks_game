@@ -2,6 +2,8 @@
 #define GAMEWORLD
 #include "Hand.h"
 
+class Game;
+
 class GameWorld
 {
 private:
@@ -12,21 +14,28 @@ private:
 	bool friendlyFireEnabled;
 	bool overflowEnabled;
 	bool allowPointSplits;
+	Game* m_game;
 
 	//helper mutators
-	void clean(); //makes sure Hand digits follow rules
+	//void clean(); //makes sure Hand digits follow rules
 public:
 	//accessors
 	Hand* tLeft() const;
 	Hand* tRight() const;
 	Hand* bLeft() const;
 	Hand* bRight() const;
+	bool FFOn() const;
+	bool OFOn() const;
+	bool PSOn() const;
 	//mutators
-	GameWorld(bool friendlyFire = false, bool overflow = false, bool allowSplit = true);
+	GameWorld(Game* game, bool friendlyFire = false, bool overflow = false, bool allowSplit = true);
 	void attack(Hand *from, Hand *to); //calls clean
-	void split(int leftNum);
+	bool split(int amtL2R); //pass in the # of digits to be transferred from left hand to right hand (can be negative)
 	~GameWorld();
 	
 };
+inline bool GameWorld::FFOn() const { return friendlyFireEnabled; }
+inline bool GameWorld::OFOn() const { return overflowEnabled; }
+inline bool GameWorld::PSOn() const { return allowPointSplits; }
 
 #endif
