@@ -14,7 +14,7 @@ Hand::Hand(GameWorld *world, int player)
 void Hand::setDead(bool isDead)
 {
 	m_isDead = isDead;
-	m_digits = 0;
+	if (isDead) m_digits = 0;
 }
 void Hand::addDigits(int increment)
 {

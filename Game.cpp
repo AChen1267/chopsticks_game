@@ -5,10 +5,11 @@
 #include <string>
 using namespace std;
 
-Game::Game(bool friendlyFire, bool overflow, bool allowSplit)
+Game::Game(bool friendlyFire, bool overflow, bool allowSplit, bool ai)
 {
 	topsTurn = true;
 	topScore = bottomScore = 0;
+	aiOn = ai;
 	m_gameWorld = new GameWorld(this,friendlyFire,overflow,allowSplit);
 }
 void Game::display()
@@ -47,48 +48,46 @@ void Game::play()
 		bool tAlive = !(tld || trd); //both hands are alive
 		bool bAlive = !(bld || brd);
 		bool splitValid = false;
-		//problem: hands can still attack self in FF
 
-		if (topsTurn)
+		if (topsTurn && !aiOn)
 		{
 			cout << "It is top's turn. ";
 			if (m_gameWorld->PSOn())
 			{
-				if (tAlive)
+				cout << "Will you (A)ttack";
+				//the condition below checks for nonsplitting configurations: equal digits per hand, (0,1) or (1,0), (1,2) or (2,1), and (3,4) or (4,3)
+				if (m_gameWorld->tLeft()->numDigits() != m_gameWorld->tRight()->numDigits() &&
+					!((m_gameWorld->tLeft()->numDigits() == 1 && m_gameWorld->tRight()->numDigits() == 0) ||
+						(m_gameWorld->tLeft()->numDigits() == 0 && m_gameWorld->tRight()->numDigits() == 1)) &&
+					!((m_gameWorld->tLeft()->numDigits() == 2 && m_gameWorld->tRight()->numDigits() == 1) ||
+						(m_gameWorld->tLeft()->numDigits() == 1 && m_gameWorld->tRight()->numDigits() == 2)) &&
+					!((m_gameWorld->tLeft()->numDigits() == 3 && m_gameWorld->tRight()->numDigits() == 4) ||
+						(m_gameWorld->tLeft()->numDigits() == 4 && m_gameWorld->tRight()->numDigits() == 3)))
 				{
-					cout << "Will you (A)ttack";
-					//the condition below checks for nonsplitting configurations: equal digits per hand, (1,2) or (2,1), and (3,4) or (4,3)
-					if (m_gameWorld->tLeft()->numDigits() != m_gameWorld->tRight()->numDigits() &&
-						!((m_gameWorld->tLeft()->numDigits() == 2 && m_gameWorld->tRight()->numDigits() == 1) ||
-						 (m_gameWorld->tLeft()->numDigits() == 1 && m_gameWorld->tRight()->numDigits() == 2)) &&
-						!((m_gameWorld->tLeft()->numDigits() == 3 && m_gameWorld->tRight()->numDigits() == 4) ||
-						 (m_gameWorld->tLeft()->numDigits() == 4 && m_gameWorld->tRight()->numDigits() == 3)))
-					{
-						cout << " or (S)plit";
-						splitValid = true; //function for splitValid? need to also check for forced mirrors (1,2) (3,4)
-					}
+					cout << " or (S)plit";
+					splitValid = true;
+				}
+				cout << "?" << endl;
+				getline(cin,option);
+				while (option.compare("A") != 0 && ((splitValid && option.compare("S") != 0) || (!splitValid && option.compare("S") == 0)))
+				{
+					cout << "That is not a valid option. Will you (A)ttack";
+					if (m_gameWorld->tLeft()->numDigits() != m_gameWorld->tRight()->numDigits())
+						" or (S)plit";
 					cout << "?" << endl;
 					getline(cin,option);
-					while (option.compare("A") != 0 && ((splitValid && option.compare("S") != 0) || (!splitValid && option.compare("S") == 0)))
-					{
-						cout << "That is not a valid option. Will you (A)ttack";
-						if (m_gameWorld->tLeft()->numDigits() != m_gameWorld->tRight()->numDigits())
-							" or (S)plit";
-						cout << "?" << endl;
-						getline(cin,option);
-					}
 				}
 			}
 			if (!option.compare("S"))
 			{
 				string LtoRamt;
 				cout << "State the amount to be transferred from left to right. Negative indicates right to left. " << endl;
-				cin >> LtoRamt;
+				getline(cin,LtoRamt);
 				int amt = atoi(LtoRamt.c_str());
 				while (amt == 0 || !m_gameWorld->split(amt))
 				{
 					cout << "Argument invalid. State the amount to be transferred from left to right. " << endl;
-					cin >> LtoRamt;
+					getline(cin,LtoRamt);
 					amt = atoi(LtoRamt.c_str());
 				}
 			}
@@ -114,23 +113,24 @@ void Game::play()
 				if (!brd)	cout << "(BR)Bottom right ";
 				if (m_gameWorld->FFOn())
 				{
-					if (!tld)	cout << "(ML)My left ";
-					if (!trd)	cout << "(MR)My right";
+					if (!tld && useHand.compare("L"))	cout << "(ML)My left "; //can't attack own hand
+					if (!trd && useHand.compare("R"))	cout << "(MR)My right";
 				}
 				cout << endl;
 				getline(cin,targetHand);
 				while (targetHand.compare("BL") != 0 && targetHand.compare("BR") != 0
 					&& targetHand.compare("ML") != 0 && targetHand.compare("MR") != 0
 					|| (targetHand.compare("BL") == 0 && bld) || (targetHand.compare("BR") == 0 && brd)
-					|| (targetHand.compare("ML") == 0 && tld) || (targetHand.compare("MR") == 0 && trd))
+					|| (targetHand.compare("ML") == 0 && (tld || useHand.compare("L") == 0))
+					|| (targetHand.compare("MR") == 0 && (trd || useHand.compare("R") == 0)))
 				{
 					cout << "That is not a valid option. Which hand will you attack? ";
 					if (!bld)	cout << "(BL)Bottom left ";
 					if (!brd)	cout << "(BR)Bottom right ";
 					if (m_gameWorld->FFOn())
 					{
-						if (!tld)	cout << "(ML)My left ";
-						if (!trd)	cout << "(MR)My right";
+						if (!tld && useHand.compare("L"))	cout << "(ML)My left ";
+						if (!trd && useHand.compare("R"))	cout << "(MR)My right";
 					}
 					cout << endl;
 					getline(cin,targetHand);
@@ -152,47 +152,49 @@ void Game::play()
 				m_gameWorld->attack(usePtr,tarPtr);
 			}
 		}
-	
+		else if (topsTurn && aiOn)
+		{
+			AI();
+		}
 		else
 		{
 			cout << "It is bottom's turn. ";
 			if (m_gameWorld->PSOn())
 			{
-				if (bAlive)
+				cout << "Will you (A)ttack";
+				//the condition below checks for nonsplitting configurations: equal digits per hand, (0,1) or (1,0), (1,2) or (2,1), and (3,4) or (4,3)
+				if (m_gameWorld->bLeft()->numDigits() != m_gameWorld->bRight()->numDigits() &&
+					!((m_gameWorld->bLeft()->numDigits() == 1 && m_gameWorld->bRight()->numDigits() == 0) ||
+						(m_gameWorld->bLeft()->numDigits() == 0 && m_gameWorld->bRight()->numDigits() == 1)) &&
+					!((m_gameWorld->bLeft()->numDigits() == 2 && m_gameWorld->bRight()->numDigits() == 1) ||
+						(m_gameWorld->bLeft()->numDigits() == 1 && m_gameWorld->bRight()->numDigits() == 2)) &&
+					!((m_gameWorld->bLeft()->numDigits() == 3 && m_gameWorld->bRight()->numDigits() == 4) ||
+						(m_gameWorld->bLeft()->numDigits() == 4 && m_gameWorld->bRight()->numDigits() == 3)))
 				{
-					cout << "Will you (A)ttack";
-					//the condition below checks for nonsplitting configurations: equal digits per hand, (1,2) or (2,1), and (3,4) or (4,3)
-					if (m_gameWorld->bLeft()->numDigits() != m_gameWorld->bRight()->numDigits() &&
-						!((m_gameWorld->bLeft()->numDigits() == 2 && m_gameWorld->bRight()->numDigits() == 1) ||
-						 (m_gameWorld->bLeft()->numDigits() == 1 && m_gameWorld->bRight()->numDigits() == 2)) &&
-						!((m_gameWorld->bLeft()->numDigits() == 3 && m_gameWorld->bRight()->numDigits() == 4) ||
-						 (m_gameWorld->bLeft()->numDigits() == 4 && m_gameWorld->bRight()->numDigits() == 3)))
-					{
-						cout << " or (S)plit";
-						splitValid = true;
-					}
+					cout << " or (S)plit";
+					splitValid = true;
+				}
+				cout << "?" << endl;
+				getline(cin,option);
+				while (option.compare("A") != 0 && ((splitValid && option.compare("S") != 0)||(!splitValid && option.compare("S") == 0)))
+				{
+					cout << "That is not a valid option. Will you (A)ttack";
+					if (m_gameWorld->bLeft()->numDigits() != m_gameWorld->bRight()->numDigits())
+						" or (S)plit";
 					cout << "?" << endl;
 					getline(cin,option);
-					while (option.compare("A") != 0 && ((splitValid && option.compare("S") != 0)||(!splitValid && option.compare("S") == 0)))
-					{
-						cout << "That is not a valid option. Will you (A)ttack";
-						if (m_gameWorld->bLeft()->numDigits() != m_gameWorld->bRight()->numDigits())
-							" or (S)plit";
-						cout << "?" << endl;
-						getline(cin,option);
-					}
 				}
 			}
 			if (!option.compare("S"))
 			{
 				string LtoRamt;
 				cout << "State the amount to be transferred from left to right. Negative indicates right to left. " << endl;
-				cin >> LtoRamt;
+				getline(cin, LtoRamt);
 				int amt = atoi(LtoRamt.c_str());
 				while (amt == 0 || !m_gameWorld->split(amt))
 				{
 					cout << "Argument invalid. State the amount to be transferred from left to right. " << endl;
-					cin >> LtoRamt;
+					getline(cin,LtoRamt);
 					amt = atoi(LtoRamt.c_str());
 				}
 			}
@@ -218,23 +220,24 @@ void Game::play()
 				if (!trd)	cout << "(TR)Top right ";
 				if (m_gameWorld->FFOn())
 				{
-					if (!bld)	cout << "(ML)My left ";
-					if (!brd)	cout << "(MR)My right";
+					if (!bld && useHand.compare("L"))	cout << "(ML)My left ";
+					if (!brd && useHand.compare("R"))	cout << "(MR)My right";
 				}
 				cout << endl;
 				getline(cin,targetHand);
 				while (targetHand.compare("TL") != 0 && targetHand.compare("TR") != 0
 					&& targetHand.compare("ML") != 0 && targetHand.compare("MR") != 0
 					|| (targetHand.compare("TL") == 0 && tld) || (targetHand.compare("TR") == 0 && trd)
-					|| (targetHand.compare("ML") == 0 && bld) || (targetHand.compare("MR") == 0 && brd))
+					|| (targetHand.compare("ML") == 0 && (bld || useHand.compare("L") == 0))
+					|| (targetHand.compare("MR") == 0 && (brd || useHand.compare("R") == 0)))
 				{
 					cout << "That is not a valid option. Which hand will you attack? ";
 					if (!tld)	cout << "(TL)Top left ";
 					if (!trd)	cout << "(TR)Top right ";
 					if (m_gameWorld->FFOn())
 					{
-						if (!bld)	cout << "(ML)My left ";
-						if (!brd)	cout << "(MR)My right";
+						if (!bld && useHand.compare("L"))	cout << "(ML)My left ";
+						if (!brd && useHand.compare("R"))	cout << "(MR)My right";
 					}
 					cout << endl;
 					getline(cin,targetHand);
@@ -259,4 +262,117 @@ void Game::play()
 		topsTurn = !topsTurn;
 		clearScreen();
 	}
+}
+
+void Game::AI()
+{
+	//AI works by:
+	//1. using a killing move (if any)
+	//2. giving the largest number of digits/points to opponent
+	Hand *usePtr = m_gameWorld->tLeft();
+	Hand *tarPtr = m_gameWorld->bLeft();
+	int largestSum = 0;
+	if (m_gameWorld->OFOn())
+	{
+		int sum = 0;
+		if (!usePtr->isDead())
+		{
+			if (!tarPtr->isDead())
+			{
+				largestSum = m_gameWorld->tLeft()->numDigits() + m_gameWorld->bLeft()->numDigits() % 5;
+				if (largestSum == 0) 
+				{
+					m_gameWorld->attack(usePtr,tarPtr); return;
+				}
+			}
+			if (!m_gameWorld->bRight()->isDead())
+			{
+				sum = m_gameWorld->tLeft()->numDigits() + m_gameWorld->bRight()->numDigits() % 5;
+				if (sum == 0) 
+				{
+					m_gameWorld->attack(usePtr,m_gameWorld->bRight()); return;
+				}
+				if (sum > largestSum)
+				{
+					largestSum = sum;
+					tarPtr = m_gameWorld->bRight();
+				}
+			}
+		}
+		if (!m_gameWorld->tRight()->isDead())
+		{
+			if (!m_gameWorld->bLeft()->isDead())
+			{
+				sum = m_gameWorld->tRight()->numDigits() + m_gameWorld->bLeft()->numDigits() % 5;
+				if (sum == 0) 
+				{
+					m_gameWorld->attack(m_gameWorld->tRight(),m_gameWorld->bLeft()); return;
+				}
+				if (sum > largestSum)
+				{
+					largestSum = sum; 
+					usePtr = m_gameWorld->tRight();
+					tarPtr = m_gameWorld->bLeft();
+				}
+			}
+			if (!m_gameWorld->bRight()->isDead())
+			{
+				sum = m_gameWorld->tRight()->numDigits() + m_gameWorld->bRight()->numDigits() % 5;
+				if (sum == 0) 
+				{
+					m_gameWorld->attack(m_gameWorld->tRight(),m_gameWorld->bRight()); return;
+				}
+				if (sum > largestSum)
+				{
+					largestSum = sum;
+					usePtr = m_gameWorld->tRight();
+					tarPtr = m_gameWorld->bRight();
+				}
+			}
+		}
+	}
+	else
+	{
+		int sum = 0;
+		if (!usePtr->isDead())
+		{
+			if (!tarPtr->isDead())
+				largestSum = m_gameWorld->tLeft()->numDigits() + m_gameWorld->bLeft()->numDigits();
+			if (!m_gameWorld->bRight()->isDead())
+			{
+				sum = m_gameWorld->tLeft()->numDigits() + m_gameWorld->bRight()->numDigits();
+				if (sum > largestSum)
+				{
+					largestSum = sum;
+					tarPtr = m_gameWorld->bRight();
+				}
+			}
+		}
+		if (!m_gameWorld->tRight()->isDead())
+		{
+			if (!m_gameWorld->bLeft()->isDead())
+			{
+				sum = m_gameWorld->tRight()->numDigits() + m_gameWorld->bLeft()->numDigits();
+				if (sum > largestSum)
+				{
+					largestSum = sum; 
+					usePtr = m_gameWorld->tRight();
+					tarPtr = m_gameWorld->bLeft();
+				}
+			}
+			if (!m_gameWorld->bRight()->isDead())
+			{
+				sum = m_gameWorld->tRight()->numDigits() + m_gameWorld->bRight()->numDigits();
+				if (sum > largestSum)
+				{
+					largestSum = sum;
+					usePtr = m_gameWorld->tRight();
+					tarPtr = m_gameWorld->bRight();
+				}
+			}
+		}
+	}
+	m_gameWorld->attack(usePtr,tarPtr);
+	cout << "AI has decided. Press 'enter' to continue.\n";
+	cin.ignore(1000,'\n');
 }

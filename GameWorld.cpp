@@ -50,6 +50,8 @@ bool GameWorld::split(int amtL2R)
 		{
 			topsLeft->addDigits(-amtL2R);
 			topsRight->addDigits(amtL2R);
+			if (topsLeft->isDead()) topsLeft->setDead(false);
+			if (topsRight->isDead()) topsRight->setDead(false);
 		}
 	}
 	else
@@ -64,6 +66,8 @@ bool GameWorld::split(int amtL2R)
 		{
 			bottomsLeft->addDigits(-amtL2R);
 			bottomsRight->addDigits(amtL2R);
+			if (bottomsLeft->isDead()) bottomsLeft->setDead(false);
+			if (bottomsRight->isDead()) bottomsRight->setDead(false);
 		}
 	}
 	return true;
